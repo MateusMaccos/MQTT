@@ -45,23 +45,45 @@ class Cliente:
         self.opcoes_selecionadas = []
 
     def desenhar_painel(self, tela, opcoes_disponiveis):
-        self.lb_opcoes_disponiveis = tk.Listbox(tela, selectmode=tk.MULTIPLE)
+        tela_cliente = tk.Frame(tela)
+        tela_cliente.pack(pady=5)
+
+        frame_config = tk.Frame(tela_cliente)
+        frame_config.pack(pady=5)
+
+        frame_sensores = tk.Frame(frame_config)
+        frame_sensores.pack(pady=5, side=tk.LEFT)
+        frame_sensores_inscritos = tk.Frame(frame_config)
+        frame_sensores_inscritos.pack(pady=5, side=tk.RIGHT)
+
+        self.lbl_mensagens = tk.Label(frame_sensores, text="Sensores:")
+        self.lbl_mensagens.pack(side=tk.TOP)
+        self.lb_opcoes_disponiveis = tk.Listbox(frame_sensores, selectmode=tk.MULTIPLE)
         self.lb_opcoes_disponiveis.pack(padx=10, pady=10)
 
         for opcao in opcoes_disponiveis:
             self.lb_opcoes_disponiveis.insert(tk.END, opcao.nome)
             self.opcoes_disponiveis.append(opcao.nome)
 
-        self.lb_opcoes_escolhidas = tk.Listbox(tela, selectmode=tk.SINGLE)
+        self.lbl_mensagens = tk.Label(
+            frame_sensores_inscritos, text="Sensores inscritos:"
+        )
+        self.lbl_mensagens.pack(side=tk.TOP)
+        self.lb_opcoes_escolhidas = tk.Listbox(
+            frame_sensores_inscritos, selectmode=tk.SINGLE
+        )
         self.lb_opcoes_escolhidas.pack(padx=10, pady=10)
 
-        self.btn_assinar = tk.Button(tela, text="Assinar", command=self.assinar)
-        self.btn_assinar.pack(pady=5)
+        self.btn_assinar = tk.Button(frame_config, text="Assinar", command=self.assinar)
+        self.btn_assinar.pack(pady=(50, 0))
 
-        self.btn_assinar = tk.Button(
-            tela, text="Remover assinatura", command=self.removerAssinatura
+        self.btn_tirar_assinatura = tk.Button(
+            frame_config, text="Remover assinatura", command=self.removerAssinatura
         )
-        self.btn_assinar.pack(pady=10)
+        self.btn_tirar_assinatura.pack(pady=5)
+
+        separator = tk.Frame(tela_cliente, height=2, bd=1, relief=tk.SUNKEN)
+        separator.pack(fill="x", padx=5, pady=5, side=tk.BOTTOM)
 
     def processar_mensagem(self, client, userdata, message):
         topico = message.topic
@@ -83,10 +105,13 @@ class Cliente:
                 self.lb_opcoes_escolhidas.insert(tk.END, opcao)
 
     def removerAssinatura(self):
-        selecao = self.lb_opcoes_escolhidas.curselection()[0]
-        opcao = self.opcoes_selecionadas[selecao]
-        self.opcoes_selecionadas.remove(opcao)
-        self.lb_opcoes_escolhidas.delete(selecao)
+        try:
+            selecao = self.lb_opcoes_escolhidas.curselection()[0]
+            opcao = self.opcoes_selecionadas[selecao]
+            self.opcoes_selecionadas.remove(opcao)
+            self.lb_opcoes_escolhidas.delete(selecao)
+        except:
+            print("Nenhuma opção selecionada")
 
 
 class Aplicacao:
@@ -97,6 +122,8 @@ class Aplicacao:
             Sensor("Sensor3", "velocidade", 0, 100),
         ]
         self.clientes = [
+            Cliente(),
+            Cliente(),
             Cliente(),
         ]
         self.tela = None
@@ -110,17 +137,41 @@ class Aplicacao:
     def run(self):
         self.tela = tk.Tk()
         self.tela.title("Comunicação MQTT")
-        self.tela.geometry("500x500")
+        self.tela.geometry("1000x500")
+
+        # Cria um Canvas
+        self.canvas = tk.Canvas(self.tela)
+        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Adiciona barras de rolagem
+        self.scrollbar_vertical = tk.Scrollbar(
+            self.tela, orient=tk.VERTICAL, command=self.canvas.yview
+        )
+        self.scrollbar_vertical.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Configuração do Canvas
+        self.canvas.configure(
+            yscrollcommand=self.scrollbar_vertical.set,
+        )
+        self.canvas.bind("<Configure>", self.on_canvas_configure)
+
+        # Adiciona um frame para o conteúdo
+        self.frame_conteudo = tk.Frame(self.canvas)
+        self.canvas.create_window((0, 0), window=self.frame_conteudo, anchor="nw")
 
         for cliente in self.clientes:
-            cliente.desenhar_painel(self.tela, self.sensores)
+            cliente.desenhar_painel(self.frame_conteudo, self.sensores)
 
-        self.lbl_mensagens = tk.Label(self.tela, text="Mensagens:")
-        self.lbl_mensagens.pack(pady=5)
+        # self.lbl_mensagens = tk.Label(self.frame_conteudo, text="Mensagens:")
+        # self.lbl_mensagens.pack(pady=5)
 
-        self.lbl_mensagens_recebidas = tk.Label(self.tela, text="")
-        self.lbl_mensagens_recebidas.pack()
+        # self.lbl_mensagens_recebidas = tk.Label(self.frame_conteudo, text="")
+        # self.lbl_mensagens_recebidas.pack()
+
         self.tela.mainloop()
+
+    def on_canvas_configure(self, event):
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
 
 if __name__ == "__main__":
