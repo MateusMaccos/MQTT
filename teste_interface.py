@@ -53,37 +53,49 @@ class Cliente:
         frame_config = tk.Frame(tela_cliente)
         frame_config.pack(pady=5)
 
-        self.lbl_mensagens = tk.Label(frame_config, text=f"Cliente {self.id}")
-        self.lbl_mensagens.pack(padx=20, side=tk.LEFT)
+        self.lbl_cliente = tk.Label(frame_config, text=f"Cliente {self.id}")
+        self.lbl_cliente.pack(padx=20, side=tk.LEFT)
 
         frame_sensores = tk.Frame(frame_config)
         frame_sensores.pack(pady=5, side=tk.LEFT)
-        frame_sensores_inscritos = tk.Frame(frame_config)
-        frame_sensores_inscritos.pack(pady=5, side=tk.RIGHT)
 
-        self.lbl_mensagens = tk.Label(frame_sensores, text="Sensores:")
-        self.lbl_mensagens.pack(side=tk.TOP)
+        self.lbl_sensores_disp = tk.Label(frame_sensores, text="Sensores:")
+        self.lbl_sensores_disp.pack(side=tk.TOP)
         self.lb_opcoes_disponiveis = tk.Listbox(frame_sensores, selectmode=tk.MULTIPLE)
         self.lb_opcoes_disponiveis.pack(padx=10, pady=10)
+
+        frame_mensagens = tk.Frame(frame_config)
+        frame_mensagens.pack(pady=5, side=tk.RIGHT)
+
+        self.lbl_mensagens = tk.Label(frame_mensagens, text="Medições:")
+        self.lbl_mensagens.pack(side=tk.TOP)
+        self.lb_mensagens = tk.Listbox(frame_mensagens, width=50, height=10)
+        self.lb_mensagens.pack(pady=10)
 
         for opcao in opcoes_disponiveis:
             self.lb_opcoes_disponiveis.insert(tk.END, opcao.nome)
             self.opcoes_disponiveis.append(opcao.nome)
 
-        self.lbl_mensagens = tk.Label(
+        frame_sensores_inscritos = tk.Frame(frame_config)
+        frame_sensores_inscritos.pack(pady=5, side=tk.RIGHT)
+
+        self.lbl_sensores_assinados = tk.Label(
             frame_sensores_inscritos, text="Sensores inscritos:"
         )
-        self.lbl_mensagens.pack(side=tk.TOP)
+        self.lbl_sensores_assinados.pack(side=tk.TOP)
         self.lb_opcoes_escolhidas = tk.Listbox(
             frame_sensores_inscritos, selectmode=tk.SINGLE
         )
         self.lb_opcoes_escolhidas.pack(padx=10, pady=10)
 
-        self.btn_assinar = tk.Button(frame_config, text="Assinar", command=self.assinar)
+        frame_btn = tk.Frame(frame_config)
+        frame_btn.pack(pady=5)
+
+        self.btn_assinar = tk.Button(frame_btn, text="Assinar", command=self.assinar)
         self.btn_assinar.pack(pady=(50, 0))
 
         self.btn_tirar_assinatura = tk.Button(
-            frame_config, text="Remover assinatura", command=self.removerAssinatura
+            frame_btn, text="Remover assinatura", command=self.removerAssinatura
         )
         self.btn_tirar_assinatura.pack(pady=5)
 
@@ -100,6 +112,10 @@ class Cliente:
 
     def on_message(self, client, userdata, message):
         print(f"Mensagem recebida {message.topic}: {message.payload.decode()}")
+        self.mensagens.append(f"{message.topic} mediu: {message.payload.decode()}")
+        self.lb_mensagens.insert(
+            tk.END, f"{message.topic} mediu: {message.payload.decode()}"
+        )
 
     def assinar(self):
         selecao = self.lb_opcoes_disponiveis.curselection()
@@ -116,6 +132,7 @@ class Cliente:
             opcao = self.opcoes_selecionadas[selecao]
             self.opcoes_selecionadas.remove(opcao)
             self.lb_opcoes_escolhidas.delete(selecao)
+            self.client.unsubscribe(opcao)
         except:
             print("Nenhuma opção selecionada")
 
@@ -133,14 +150,10 @@ class Aplicacao:
     def adicionarSensor(self, nome, parametro, min, max):
         self.sensores.append(Sensor(nome, parametro, min, max))
 
-    def desenhar_clientes(self):
-        for cliente in self.clientes:
-            cliente.desenhar_painel(self.frame_conteudo, self.sensores)
-
     def adicionarCliente(self):
         cliente = Cliente(len(self.clientes) + 1)
         self.clientes.append(cliente)
-        self.desenhar_clientes()
+        cliente.desenhar_painel(self.frame_conteudo, self.sensores)
 
     def run(self):
         self.tela = tk.Tk()
@@ -169,6 +182,11 @@ class Aplicacao:
 
         self.btn_assinar = tk.Button(
             self.tela, text="Adicionar Cliente", command=self.adicionarCliente
+        )
+        self.btn_assinar.pack(pady=5)
+
+        self.btn_assinar = tk.Button(
+            self.tela, text="Adicionar Sensor", command=self.adicionarSensor
         )
         self.btn_assinar.pack(pady=5)
 
