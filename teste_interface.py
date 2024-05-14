@@ -32,17 +32,19 @@ class Sensor:
 
 
 class Cliente:
-    def __init__(self):
+    def __init__(self, id):
+        self.id = id
         self.client = mqtt.Client(
             mqtt.CallbackAPIVersion.VERSION1,
         )
         self.client.on_message = self.on_message
         self.client.connect(host="test.mosquitto.org", port=1883)
         self.client.loop_start()
-        self.client.subscribe("sensor/+/+")
-        self.client.message_callback_add("sensor/+/+", self.processar_mensagem)
+        # self.client.subscribe("sensor/+/+")
+        # self.client.message_callback_add("sensor/+/+", self.processar_mensagem)
         self.opcoes_disponiveis = []
         self.opcoes_selecionadas = []
+        self.mensagens = []
 
     def desenhar_painel(self, tela, opcoes_disponiveis):
         tela_cliente = tk.Frame(tela)
@@ -50,6 +52,9 @@ class Cliente:
 
         frame_config = tk.Frame(tela_cliente)
         frame_config.pack(pady=5)
+
+        self.lbl_mensagens = tk.Label(frame_config, text=f"Cliente {self.id}")
+        self.lbl_mensagens.pack(padx=20, side=tk.LEFT)
 
         frame_sensores = tk.Frame(frame_config)
         frame_sensores.pack(pady=5, side=tk.LEFT)
@@ -94,13 +99,14 @@ class Cliente:
         )
 
     def on_message(self, client, userdata, message):
-        pass
+        print(f"Mensagem recebida {message.topic}: {message.payload.decode()}")
 
     def assinar(self):
         selecao = self.lb_opcoes_disponiveis.curselection()
         for index in selecao:
             opcao = self.opcoes_disponiveis[index]
             if opcao not in self.opcoes_selecionadas:
+                self.client.subscribe(opcao)
                 self.opcoes_selecionadas.append(opcao)
                 self.lb_opcoes_escolhidas.insert(tk.END, opcao)
 
@@ -121,18 +127,20 @@ class Aplicacao:
             Sensor("Sensor2", "umidade", 40, 60),
             Sensor("Sensor3", "velocidade", 0, 100),
         ]
-        self.clientes = [
-            Cliente(),
-            Cliente(),
-            Cliente(),
-        ]
+        self.clientes = []
         self.tela = None
 
     def adicionarSensor(self, nome, parametro, min, max):
         self.sensores.append(Sensor(nome, parametro, min, max))
 
+    def desenhar_clientes(self):
+        for cliente in self.clientes:
+            cliente.desenhar_painel(self.frame_conteudo, self.sensores)
+
     def adicionarCliente(self):
-        self.clientes.append(Cliente())
+        cliente = Cliente(len(self.clientes) + 1)
+        self.clientes.append(cliente)
+        self.desenhar_clientes()
 
     def run(self):
         self.tela = tk.Tk()
@@ -159,8 +167,10 @@ class Aplicacao:
         self.frame_conteudo = tk.Frame(self.canvas)
         self.canvas.create_window((0, 0), window=self.frame_conteudo, anchor="nw")
 
-        for cliente in self.clientes:
-            cliente.desenhar_painel(self.frame_conteudo, self.sensores)
+        self.btn_assinar = tk.Button(
+            self.tela, text="Adicionar Cliente", command=self.adicionarCliente
+        )
+        self.btn_assinar.pack(pady=5)
 
         # self.lbl_mensagens = tk.Label(self.frame_conteudo, text="Mensagens:")
         # self.lbl_mensagens.pack(pady=5)
@@ -175,6 +185,5 @@ class Aplicacao:
 
 
 if __name__ == "__main__":
-    global app
     app = Aplicacao()
     app.run()
