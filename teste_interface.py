@@ -1,72 +1,81 @@
 import tkinter as tk
 import paho.mqtt.client as mqtt
+import threading
+import time
 
 
 class Sensor:
     def __init__(self, nome):
         self.nome = nome
+        self.ativo = False
         self.parametro = None
-        self.minimo = None
-        self.maximo = None
-        self.valor_atual = 0
+        self.min = None
+        self.max = None
+        self.valor_atual = None
         self.client = mqtt.Client(
             mqtt.CallbackAPIVersion.VERSION1,
         )
         self.client.connect(host="test.mosquitto.org", port=1883)
         self.client.loop_start()
 
-    def ler_valor_atual(self):
-        self.client.publish(
-            topic=f"sensor/{self.nome}",
-            payload=f"Valor lido: {self.valor_atual}",
-        )
+    def desativar(self):
+        self.ativo = False
 
-    def ler_parametro(self):
-        return self.parametro_selecionado.get()
-
-    def ler_max(self):
-        return self.parametro_selecionado.get()
-
-    def ler_min(self):
-        return self.parametro_selecionado.get()
+    def iniciar_leituras(self):
+        self.ativo = True
+        while self.ativo:
+            if self.valor_atual != None:
+                mensagem = self.valor_atual
+                if self.min != None and self.max != None:
+                    if self.valor_atual == self.min:
+                        mensagem += "(MIN)"
+                    if self.valor_atual == self.max:
+                        mensagem += "(MAX)"
+                self.client.publish(
+                    topic=self.nome,
+                    payload=mensagem + f" de {self.parametro}",
+                )
+                time.sleep(1)
 
     def set_valor_atual(self):
-        self.valor_atual = self.campo_valor_atual.get()
-        if self.valor_atual not in [None, ""]:
+        if self.campo_valor_atual.get() not in [None, ""]:
+            self.valor_atual = self.campo_valor_atual.get()
             print(self.valor_atual)
         else:
             print("Digitou nada")
-        # if self.valor_atual == self.minimo:
-        #     self.client.publish(
-        #         f"sensor/{self.nome}", f"Atingiu valor mínimo: {self.valor_atual}"
-        #     )
-        # elif self.valor_atual == self.maximo:
-        #     self.client.publish(
-        #         f"sensor/{self.nome}", f"Atingiu valor máximo: {self.valor_atual}"
-        #     )
-        # if self.valor_atual < self.minimo or self.valor_atual > self.maximo:
-        #     self.client.publish(
-        #         f"sensor/{self.nome}", f"Valor fora do limite: {self.valor_atual}"
-        #     )
 
     def set_valor_min(self):
-        pass
+        if self.campo_valor_min.get() not in [None, ""]:
+            self.min = self.campo_valor_min.get()
+            print(self.min)
+        else:
+            print("Digitou nenhum minimo")
 
     def set_valor_max(self):
-        pass
+        if self.campo_valor_max.get() not in [None, ""]:
+            self.max = self.campo_valor_max.get()
+            print(self.max)
+        else:
+            print("Digitou nenhum maximo")
 
     def set_parametro(self):
-        pass
+        self.parametro = self.parametro_selecionado.get()
+        print(self.parametro)
 
     def desenhar_painel(self, tela):
-        tela_sensor = tk.Frame(tela)
-        tela_sensor.pack(pady=5)
+        self.tela_sensor = tk.Frame(tela)
+        self.tela_sensor.pack(pady=5)
 
-        frame_config = tk.Frame(tela_sensor)
+        frame_config = tk.Frame(self.tela_sensor)
         frame_config.pack(pady=5)
 
         self.lbl_cliente = tk.Label(frame_config, text=f"Sensor {self.nome}")
         self.lbl_cliente.pack(padx=20, side=tk.LEFT)
+
+        self.lbl_cliente_status = tk.Label(
+            frame_config, text=f'Status: {"Ativado" if self.ativo else "Desativado"}'
+        )
+        self.lbl_cliente_status.pack(padx=20, side=tk.LEFT)
 
         self.frame_param_valor = tk.Frame(frame_config)
         self.frame_param_valor.pack(padx=10, side=tk.LEFT)
@@ -88,6 +97,8 @@ class Sensor:
         self.lbl_cliente.pack(padx=20)
 
         self.campo_valor_atual = tk.Entry(self.frame_param_valor)
+        if self.valor_atual != None:
+            self.campo_valor_atual.insert(tk.END, self.valor_atual)
         self.campo_valor_atual.pack(pady=20)
 
         self.frame_min_max = tk.Frame(frame_config)
@@ -97,15 +108,19 @@ class Sensor:
         self.lbl_cliente.pack(padx=20)
 
         self.campo_valor_min = tk.Entry(self.frame_min_max)
+        if self.min != None:
+            self.campo_valor_min.insert(tk.END, self.min)
         self.campo_valor_min.pack(pady=20)
 
         self.lbl_cliente = tk.Label(self.frame_min_max, text="Valor Máximo: ")
         self.lbl_cliente.pack(padx=20)
 
         self.campo_valor_max = tk.Entry(self.frame_min_max)
+        if self.max != None:
+            self.campo_valor_max.insert(tk.END, self.max)
         self.campo_valor_max.pack(pady=20)
 
-        separator = tk.Frame(tela_sensor, height=2, bd=1, relief=tk.SUNKEN)
+        separator = tk.Frame(self.tela_sensor, height=2, bd=1, relief=tk.SUNKEN)
         separator.pack(fill="x", padx=5, pady=5, side=tk.BOTTOM)
 
 
@@ -147,8 +162,21 @@ class Cliente:
 
         self.lbl_mensagens = tk.Label(frame_mensagens, text="Medições:")
         self.lbl_mensagens.pack(side=tk.TOP)
-        self.lb_mensagens = tk.Listbox(frame_mensagens, width=50, height=10)
-        self.lb_mensagens.pack(pady=10)
+
+        frame_caixa_mensagens = tk.Frame(frame_mensagens)
+        frame_caixa_mensagens.pack(fill=tk.BOTH, expand=True)
+
+        self.lb_mensagens = tk.Listbox(frame_caixa_mensagens, width=50, height=10)
+        self.lb_mensagens.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        # Crie uma barra de rolagem
+        scrollbar = tk.Scrollbar(
+            frame_caixa_mensagens, orient=tk.VERTICAL, command=self.lb_mensagens.yview
+        )
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Vincule a barra de rolagem ao Listbox
+        self.lb_mensagens.config(yscrollcommand=scrollbar.set)
 
         for opcao in opcoes_disponiveis:
             self.lb_opcoes_disponiveis.insert(tk.END, opcao.nome)
@@ -189,10 +217,9 @@ class Cliente:
         )
 
     def on_message(self, client, userdata, message):
-        print(f"Mensagem recebida {message.topic}: {message.payload.decode()}")
         self.mensagens.append(f"{message.topic} mediu: {message.payload.decode()}")
         self.lb_mensagens.insert(
-            tk.END, f"{message.topic} mediu: {message.payload.decode()}"
+            tk.END, f"{message.topic} mediu {message.payload.decode()}"
         )
 
     def assinar(self):
@@ -221,17 +248,13 @@ class Cliente:
 
 class Aplicacao:
     def __init__(self):
-        self.sensores = [
-            Sensor(1),
-            Sensor(2),
-            Sensor(3),
-        ]
+        self.sensores = []
         self.clientes = []
         self.tela = None
         self.telaSensores = None
 
     def adicionarSensor(self):
-        sensor = Sensor(len(self.sensores) + 1)
+        sensor = Sensor(f"sensor/{len(self.sensores) + 1}")
         self.sensores.append(sensor)
         sensor.desenhar_painel(self.frame_sensores)
         # Atualiza as opções disponíveis em todos os clientes
@@ -244,6 +267,16 @@ class Aplicacao:
             sensor.set_valor_min()
             sensor.set_valor_max()
             sensor.set_parametro()
+            sensor.tela_sensor.destroy()
+            thread_envio = threading.Thread(target=sensor.iniciar_leituras)
+            thread_envio.start()
+            sensor.desenhar_painel(self.frame_sensores)
+
+    def desativarSensores(self):
+        for sensor in self.sensores:
+            sensor.desativar()
+            sensor.tela_sensor.destroy()
+            sensor.desenhar_painel(self.frame_sensores)
 
     def adicionarCliente(self):
         cliente = Cliente(len(self.clientes) + 1)
@@ -279,14 +312,19 @@ class Aplicacao:
             sensor.desenhar_painel(self.frame_sensores)
 
         self.btn_add_sensor = tk.Button(
-            self.telaSensores, text="Adicionar Sensores", command=self.adicionarSensor
+            self.telaSensores, text="Adicionar sensores", command=self.adicionarSensor
         )
         self.btn_add_sensor.pack(pady=5, side=tk.TOP)
 
-        self.btn_assinar = tk.Button(
-            self.telaSensores, text="Atualizar dados", command=self.atualizarSensores
+        self.btn_atualizar_dados = tk.Button(
+            self.telaSensores, text="Ativar sensores", command=self.atualizarSensores
         )
-        self.btn_assinar.pack()
+        self.btn_atualizar_dados.pack()
+
+        self.btn_desativar_sensores = tk.Button(
+            self.telaSensores, text="Desativar sensores", command=self.desativarSensores
+        )
+        self.btn_desativar_sensores.pack()
 
         self.telaSensores.mainloop()
 
