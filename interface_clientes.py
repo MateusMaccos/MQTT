@@ -1,5 +1,6 @@
 import tkinter as tk
 import paho.mqtt.client as mqtt
+from tkinter import ttk
 
 
 class Sensor:
@@ -22,8 +23,8 @@ class Cliente:
         self.mensagens = []
 
     def desenhar_painel(self, tela, opcoes_disponiveis):
-        tela_cliente = tk.Frame(tela)
-        tela_cliente.pack(pady=5)
+        tela_cliente = ttk.LabelFrame(tela, text="Cliente", padding=(10, 10))
+        tela_cliente.pack(pady=5, padx=5)
 
         frame_config = tk.Frame(tela_cliente)
         frame_config.pack(pady=5)
@@ -79,13 +80,15 @@ class Cliente:
         frame_btn = tk.Frame(frame_config)
         frame_btn.pack(pady=5)
 
-        self.btn_assinar = tk.Button(frame_btn, text="Assinar", command=self.assinar)
-        self.btn_assinar.pack(pady=(50, 0))
+        self.btn_assinar = ttk.Button(
+            frame_btn, text="Assinar", style="Accent.TButton", command=self.assinar
+        )
+        self.btn_assinar.pack(pady=(75, 0))
 
-        self.btn_tirar_assinatura = tk.Button(
+        self.btn_tirar_assinatura = ttk.Button(
             frame_btn, text="Remover assinatura", command=self.removerAssinatura
         )
-        self.btn_tirar_assinatura.pack(pady=5)
+        self.btn_tirar_assinatura.pack(pady=20)
 
         separator = tk.Frame(tela_cliente, height=2, bd=1, relief=tk.SUNKEN)
         separator.pack(fill="x", padx=5, pady=5, side=tk.BOTTOM)
@@ -134,6 +137,14 @@ class Aplicacao:
         self.clientes = []
         self.tela = None
         self.telaSensores = None
+        self.tema = "dark"
+
+    def mudarTema(self):
+        if self.tema == "dark":
+            self.tema = "light"
+        else:
+            self.tema = "dark"
+        self.tela.tk.call("set_theme", self.tema)
 
     def adicionarSensor(self):
         sensor = Sensor(f"sensor/{len(self.sensores) + 1}")
@@ -156,7 +167,10 @@ class Aplicacao:
     def run(self):
         self.tela = tk.Tk()
         self.tela.title("Clientes MQTT")
-        self.tela.geometry("1000x500")
+        self.tela.geometry("1200x500")
+        self.tela.iconbitmap("imagens/iconeCliente.ico")
+        self.tela.tk.call("source", "azure.tcl")
+        self.tela.tk.call("set_theme", "dark")
 
         # Cria um Canvas
         self.canvas = tk.Canvas(self.tela)
@@ -178,10 +192,29 @@ class Aplicacao:
         self.frame_conteudo = tk.Frame(self.canvas)
         self.canvas.create_window((0, 0), window=self.frame_conteudo, anchor="nw")
 
-        self.btn_assinar = tk.Button(
-            self.tela, text="Adicionar Cliente", command=self.adicionarCliente
+        self.frame_botoes = ttk.LabelFrame(
+            self.telaSensores, text="Configuração", padding=(10, 10)
         )
-        self.btn_assinar.pack(pady=5)
+        self.frame_botoes.pack(padx=5)
+
+        self.btn_assinar = ttk.Button(
+            self.frame_botoes,
+            text="Adicionar Cliente",
+            style="Accent.TButton",
+            command=self.adicionarCliente,
+        )
+        self.btn_assinar.pack(pady=5, padx=10)
+
+        self.switch = ttk.Checkbutton(
+            self.frame_botoes,
+            text="Tema",
+            style="Switch.TCheckbutton",
+            command=self.mudarTema,
+        )
+        self.switch.pack(
+            padx=5,
+            pady=10,
+        )
 
         self.tela.mainloop()
 

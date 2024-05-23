@@ -2,6 +2,7 @@ import tkinter as tk
 import paho.mqtt.client as mqtt
 import threading
 import time
+from tkinter import ttk
 
 
 class Sensor:
@@ -28,9 +29,13 @@ class Sensor:
                 mensagem = self.valor_atual
                 if self.min not in [None, ""] or self.max not in [None, ""]:
                     if self.valor_atual == self.min:
-                        mensagem += "(MIN)"
-                    if self.valor_atual == self.max:
-                        mensagem += "(MAX)"
+                        mensagem += " (MIN)"
+                    elif self.valor_atual == self.max:
+                        mensagem += " (MAX)"
+                    elif self.valor_atual > self.max:
+                        mensagem += " (>MAX)"
+                    elif self.valor_atual < self.min:
+                        mensagem += " (<MIN)"
                 self.client.publish(
                     topic=self.nome,
                     payload=mensagem + f" de {self.parametro}",
@@ -40,36 +45,32 @@ class Sensor:
     def set_valor_atual(self):
         if self.campo_valor_atual.get() not in [None, ""]:
             self.valor_atual = self.campo_valor_atual.get()
-            print(self.valor_atual)
         else:
             print("Digitou nada")
 
     def set_valor_min(self):
         if self.campo_valor_min.get() not in [None, ""]:
             self.min = self.campo_valor_min.get()
-            print(self.min)
         else:
             print("Digitou nenhum minimo")
 
     def set_valor_max(self):
         if self.campo_valor_max.get() not in [None, ""]:
             self.max = self.campo_valor_max.get()
-            print(self.max)
         else:
             print("Digitou nenhum maximo")
 
     def set_parametro(self):
         self.parametro = self.parametro_selecionado.get()
-        print(self.parametro)
 
     def desenhar_painel(self, tela):
-        self.tela_sensor = tk.Frame(tela)
+        self.tela_sensor = ttk.LabelFrame(tela, text="Sensor", padding=(10, 10))
         self.tela_sensor.pack(pady=5)
 
         frame_config = tk.Frame(self.tela_sensor)
         frame_config.pack(pady=5)
 
-        self.lbl_cliente = tk.Label(frame_config, text=f"Sensor {self.nome}")
+        self.lbl_cliente = tk.Label(frame_config, text=self.nome)
         self.lbl_cliente.pack(padx=20, side=tk.LEFT)
 
         self.lbl_cliente_status = tk.Label(
@@ -80,18 +81,21 @@ class Sensor:
         self.frame_param_valor = tk.Frame(frame_config)
         self.frame_param_valor.pack(padx=10, side=tk.LEFT)
 
-        # Lista de opções
+        self.lbl_parametro = tk.Label(self.frame_param_valor, text="Parâmetro: ")
+        self.lbl_parametro.pack(padx=20)
+
         opcoes = ["Temperatura", "Umidade", "Velocidade"]
+        if self.parametro not in [None, ""]:
+            opcao_inicial = self.parametro
+        else:
+            opcao_inicial = opcoes[0]
 
-        # Variável para armazenar a opção selecionada
-        self.parametro_selecionado = tk.StringVar(self.frame_param_valor)
-        self.parametro_selecionado.set(opcoes[0])  # Define o valor padrão
+        self.parametro_selecionado = tk.StringVar(value=opcoes)
 
-        # Criação do dropdown
-        self.dropdown = tk.OptionMenu(
-            self.frame_param_valor, self.parametro_selecionado, *opcoes
+        self.dropdown = ttk.OptionMenu(
+            self.frame_param_valor, self.parametro_selecionado, opcao_inicial, *opcoes
         )
-        self.dropdown.pack(pady=20)
+        self.dropdown.pack(pady=15)
 
         self.lbl_cliente = tk.Label(self.frame_param_valor, text="Valor Atual: ")
         self.lbl_cliente.pack(padx=20)
@@ -129,11 +133,19 @@ class Aplicacao:
         self.sensores = []
         self.tela = None
         self.telaSensores = None
+        self.tema = "dark"
         self.sensores_mqtt = mqtt.Client(
             mqtt.CallbackAPIVersion.VERSION1,
         )
         self.sensores_mqtt.connect(host="test.mosquitto.org", port=1883)
         self.sensores_mqtt.loop_start()
+
+    def mudarTema(self):
+        if self.tema == "dark":
+            self.tema = "light"
+        else:
+            self.tema = "dark"
+        self.telaSensores.tk.call("set_theme", self.tema)
 
     def adicionarSensor(self):
         sensor = Sensor(f"sensor/{len(self.sensores) + 1}")
@@ -165,6 +177,9 @@ class Aplicacao:
         self.telaSensores = tk.Tk()
         self.telaSensores.title("Sensores MQTT")
         self.telaSensores.geometry("1000x500")
+        self.telaSensores.iconbitmap("imagens/iconeSensor.ico")
+        self.telaSensores.tk.call("source", "azure.tcl")
+        self.telaSensores.tk.call("set_theme", self.tema)
 
         # Cria um Canvas
         self.canvas2 = tk.Canvas(self.telaSensores)
@@ -189,24 +204,43 @@ class Aplicacao:
         for sensor in self.sensores:
             sensor.desenhar_painel(self.frame_sensores)
 
-        self.btn_add_sensor = tk.Button(
-            self.telaSensores, text="Adicionar sensores", command=self.adicionarSensor
+        self.frame_botoes = ttk.LabelFrame(
+            self.telaSensores, text="Configuração", padding=(10, 10)
         )
-        self.btn_add_sensor.pack(padx=5, pady=5, side=tk.TOP)
+        self.frame_botoes.pack(padx=5)
 
-        self.btn_atualizar_dados = tk.Button(
-            self.telaSensores, text="Ativar sensores", command=self.atualizarSensores
+        self.btn_add_sensor = ttk.Button(
+            self.frame_botoes,
+            text="Adicionar sensores",
+            style="Accent.TButton",
+            command=self.adicionarSensor,
+        )
+        self.btn_add_sensor.pack(padx=5, pady=10, side=tk.TOP)
+
+        self.btn_atualizar_dados = ttk.Button(
+            self.frame_botoes, text="Ativar sensores", command=self.atualizarSensores
         )
         self.btn_atualizar_dados.pack(
             padx=5,
         )
 
-        self.btn_desativar_sensores = tk.Button(
-            self.telaSensores, text="Desativar sensores", command=self.desativarSensores
+        self.btn_desativar_sensores = ttk.Button(
+            self.frame_botoes, text="Desativar sensores", command=self.desativarSensores
         )
         self.btn_desativar_sensores.pack(
             padx=5,
-            pady=5,
+            pady=10,
+        )
+
+        self.switch = ttk.Checkbutton(
+            self.frame_botoes,
+            text="Tema",
+            style="Switch.TCheckbutton",
+            command=self.mudarTema,
+        )
+        self.switch.pack(
+            padx=5,
+            pady=10,
         )
 
         self.telaSensores.mainloop()
