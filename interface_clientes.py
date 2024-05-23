@@ -29,7 +29,7 @@ class Cliente:
         frame_config = tk.Frame(tela_cliente)
         frame_config.pack(pady=5)
 
-        self.lbl_cliente = tk.Label(frame_config, text=f"Cliente {self.id}")
+        self.lbl_cliente = tk.Label(frame_config, text=f"ID: {self.id}")
         self.lbl_cliente.pack(padx=20, side=tk.LEFT)
 
         frame_sensores = tk.Frame(frame_config)
