@@ -2,7 +2,7 @@
 ════╡MQTT╞════
 </h1>
 
-<img align="center" src="/images/restaum.gif">
+<img align="center" src="/imagens/GIF.gif">
 
 ## 📚 Resumo
 > O protocolo MQTT (Message Queuing Telemetry Transport) é um padrão de comunicação leve e eficiente para troca de mensagens entre dispositivos conectados em redes de Internet das Coisas (IoT). Ele foi projetado para ser simples, fácil de implementar e consumir pouca largura de banda.
