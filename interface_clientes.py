@@ -1,7 +1,7 @@
 import tkinter as tk
 import paho.mqtt.client as mqtt
 from tkinter import ttk
-
+from tkinter import messagebox
 
 class Sensor:
     def __init__(self, nome):
@@ -112,7 +112,7 @@ class Cliente:
             self.lb_opcoes_escolhidas.delete(selecao)
             self.client.unsubscribe(str(opcao))
         except:
-            print("Nenhuma opção selecionada")
+            messagebox.showwarning("Aviso", "Nenhuma opção selecionada")
 
     def atualiza_lista_sensores(self, novoSensor):
         self.opcoes_disponiveis.append(novoSensor.nome)

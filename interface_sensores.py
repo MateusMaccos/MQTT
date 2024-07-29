@@ -3,6 +3,7 @@ import paho.mqtt.client as mqtt
 import threading
 import time
 from tkinter import ttk
+from tkinter import messagebox
 
 
 class Sensor:
@@ -46,19 +47,21 @@ class Sensor:
         if self.campo_valor_atual.get() not in [None, ""]:
             self.valor_atual = float(self.campo_valor_atual.get())
         else:
-            print("Digitou nada")
+            messagebox.showwarning(
+                "Aviso", f"Valor vazio no valor atual no {self.nome}"
+            )
 
     def set_valor_min(self):
         if self.campo_valor_min.get() not in [None, ""]:
             self.min = float(self.campo_valor_min.get())
         else:
-            print("Digitou nenhum minimo")
+            messagebox.showwarning("Aviso", f"Valor vazio no mínimo no {self.nome}")
 
     def set_valor_max(self):
         if self.campo_valor_max.get() not in [None, ""]:
             self.max = float(self.campo_valor_max.get())
         else:
-            print("Digitou nenhum maximo")
+            messagebox.showwarning("Aviso", f"Valor vazio no máximo do {self.nome}")
 
     def set_parametro(self):
         self.parametro = self.parametro_selecionado.get()
