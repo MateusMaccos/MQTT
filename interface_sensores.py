@@ -26,7 +26,7 @@ class Sensor:
         self.ativo = True
         while self.ativo:
             if self.valor_atual != None:
-                mensagem = self.valor_atual
+                mensagem = str(self.valor_atual)
                 if self.min not in [None, ""] or self.max not in [None, ""]:
                     if self.valor_atual == self.min:
                         mensagem += " (MIN)"
@@ -44,19 +44,19 @@ class Sensor:
 
     def set_valor_atual(self):
         if self.campo_valor_atual.get() not in [None, ""]:
-            self.valor_atual = self.campo_valor_atual.get()
+            self.valor_atual = float(self.campo_valor_atual.get())
         else:
             print("Digitou nada")
 
     def set_valor_min(self):
         if self.campo_valor_min.get() not in [None, ""]:
-            self.min = self.campo_valor_min.get()
+            self.min = float(self.campo_valor_min.get())
         else:
             print("Digitou nenhum minimo")
 
     def set_valor_max(self):
         if self.campo_valor_max.get() not in [None, ""]:
-            self.max = self.campo_valor_max.get()
+            self.max = float(self.campo_valor_max.get())
         else:
             print("Digitou nenhum maximo")
 
@@ -163,7 +163,7 @@ class Aplicacao:
             sensor.set_valor_max()
             sensor.set_parametro()
             sensor.tela_sensor.destroy()
-            thread_envio = threading.Thread(target=sensor.iniciar_leituras)
+            thread_envio = threading.Thread(target=sensor.iniciar_leituras, daemon=True)
             thread_envio.start()
             sensor.desenhar_painel(self.frame_sensores)
 
