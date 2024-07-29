@@ -20,7 +20,6 @@ class Cliente:
 
         self.opcoes_disponiveis = []
         self.opcoes_selecionadas = []
-        self.mensagens = []
 
     def desenhar_painel(self, tela, opcoes_disponiveis):
         tela_cliente = ttk.LabelFrame(tela, text="Cliente", padding=(10, 10))
@@ -94,10 +93,7 @@ class Cliente:
         separator.pack(fill="x", padx=5, pady=5, side=tk.BOTTOM)
 
     def on_message(self, client, userdata, message):
-        self.mensagens.append(f"{message.topic} mediu: {message.payload.decode()}")
-        self.lb_mensagens.insert(
-            tk.END, f"{message.topic} mediu {message.payload.decode()}"
-        )
+        self.lb_mensagens.insert(0, f"{message.topic} mediu {message.payload.decode()}")
 
     def assinar(self):
         selecao = self.lb_opcoes_disponiveis.curselection()
